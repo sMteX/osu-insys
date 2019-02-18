@@ -46,7 +46,7 @@ export default class HopfieldNet {
 
         let minE = Number.MAX_VALUE;
         let minIt = 0;
-        let minNeurons = null;
+        let minNeurons: Neuron[][] = [];
 
         while (iteration < this.maxIter && magicCondition) {
             this.iterate();
@@ -95,141 +95,136 @@ export default class HopfieldNet {
     }
 
     private stringifyNeurons(neurons: Neuron[][]): string {
-        StringBuilder sb = new StringBuilder("[");
-        DecimalFormat df = new DecimalFormat("0.000");
-        for (int x = 0; x < n; x++) {
-            sb.append("[");
-            for (int i = 0; i < n; i++) {
-                sb.append(df.format(neurons[x][i].getOutput()) + ", ");
+        const rows = neurons.map(row => `[${row.map(neuron => neuron.output).join(', ')}]`);
+        return `[${rows.join('\n')}]`;
+    }
+
+    private shuffleArray(a: number[][]): void {
+        for (let i = a.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            const x = a[i];
+            a[i] = a[j];
+            a[j] = x;
+        }
+    }
+
+    private iterate(): void {
+        // nahodne iteruji vsemi n*n neurony
+        const combinations = [];
+        for (let i = 0; i < this.n; i++) {
+            for (let j = 0; j < this.n; i++) {
+                combinations.push([i, j]);
             }
-            sb.append("]\n");
         }
-        sb.append("]");
-        return sb.toString();
+        this.shuffleArray(combinations);
+        combinations.forEach(([x, i]) => {
+            this.updateNeuronPotential(x, i);
+            this.neurons[x][i].updateOutput();
+        });
     }
 
-private void iterate() {
-    // nahodne iteruji vsemi n*n neurony
-    ArrayList<SimpleEntry<Integer, Integer>> neurons = getIndexPairs();
-    Collections.shuffle(neurons);
-    neurons.forEach(neuron -> {
-        updateNeuronPotential(neuron.getKey(), neuron.getValue());
-        this.neurons[neuron.getKey()][neuron.getValue()].updateOutput();
-    });
-}
+    private populatePotentials(): void {
+        // 0.5 * (1 + tanh(alpha * x)) odpovida tvarem sigmoide, bez parametru alpha by to slo limitne k 0/1 okolo bodu -3/3
+        // pri jejich doporucenem nastaveni alpha = 50 je to ovsem brutalne strme a pripomina to skokovou funkci
+        // a prakticky cokoliv >= 0.05 = 1 a cokoliv <= -0.05 = 0
 
-private ArrayList<SimpleEntry<Integer, Integer>> getIndexPairs() {
-    ArrayList<SimpleEntry<Integer, Integer>> indexes = new ArrayList<>();
-    for (int x = 0; x < n; x++) {
-        for (int i = 0; i < n; i++) {
-            indexes.add(new SimpleEntry<>(x, i));
+        // ukol je rozmistit nahodne potencialy tak, aby vystupy daly dohromady cca n
+        // a mozna by bylo dobre je rozmistit tak, aby dokonce reprezentovaly realnou trasu
+        // lepsi by bylo to rozmistit doopravdy nahodne, ale muzu se uchylit i k jednoduchemu reseni a tj
+        // na hlavni diagonalu dat 1ky a mimo ni 0
+        // v cislech potencialu je to na diagonale dejme tomu random(0.05, 1) a mimo ni random(-1, -0.05) at tam nejsou velke vykyvy
+        const ABS_MIN = 0.05;
+        const ABS_MAX = 1.0;
+        for (let x = 0; x < this.n; x++) {
+            for (let i = 0; i < this.n; i++) {
+                // const potential = this.randomDoubleInRange(-ABS_MAX, ABS_MAX);
+                const potential = (x === i) ? this.randomDoubleInRange(ABS_MIN, ABS_MAX) : this.randomDoubleInRange(-ABS_MAX, -ABS_MIN);
+                this.neurons[x][i] = new Neuron(this.alpha, x, i, potential);
+            }
+        }
+        // uvidime
+    }
+
+    private randomDoubleInRange(min: number, max: number): number {
+        return min + (max - min) * Math.random();
+    }
+
+    private populateOutputs(): void {
+        for (let x = 0; x < this.n; x++) {
+            for (let i = 0; i < this.n; i++) {
+                this.neurons[x][i].updateOutput();
+            }
         }
     }
-    return indexes;
-}
 
-private void populatePotentials() {
-    // 0.5 * (1 + tanh(alpha * x)) odpovida tvarem sigmoide, bez parametru alpha by to slo limitne k 0/1 okolo bodu -3/3
-    // pri jejich doporucenem nastaveni alpha = 50 je to ovsem brutalne strme a pripomina to skokovou funkci
-    // a prakticky cokoliv >= 0.05 = 1 a cokoliv <= -0.05 = 0
-
-    // ukol je rozmistit nahodne potencialy tak, aby vystupy daly dohromady cca n
-    // a mozna by bylo dobre je rozmistit tak, aby dokonce reprezentovaly realnou trasu
-    // lepsi by bylo to rozmistit doopravdy nahodne, ale muzu se uchylit i k jednoduchemu reseni a tj
-    // na hlavni diagonalu dat 1ky a mimo ni 0
-    // v cislech potencialu je to na diagonale dejme tomu random(0.05, 1) a mimo ni random(-1, -0.05) at tam nejsou velke vykyvy
-    double ABS_MIN = 0.05;
-    double ABS_MAX = 1.0;
-    for (int x = 0; x < n; x++) {
-        for (int i = 0; i < n; i++) {
-//                double potential = randomDoubleInRange(-ABS_MAX, ABS_MAX);
-            double potential = (x == i) ? randomDoubleInRange(ABS_MIN, ABS_MAX) : randomDoubleInRange(-ABS_MAX, -ABS_MIN);
-            neurons[x][i] = new Neuron(x, i, potential);
+    private populateDistances(cities: City[]): void {
+        for (let i = 0; i < this.n; i++) {
+            for (let j = 0; j < this.n; j++) {
+                this.distances[i][j] = this.calculateDistance(cities[i], cities[j]);
+            }
         }
     }
-    // uvidime
-}
 
-private double randomDoubleInRange(double min, double max) {
-    return min + (max - min) * r.nextDouble();
-}
-
-private void populateOutputs() {
-    for (int x = 0; x < n; x++) {
-        for (int i = 0; i < n; i++) {
-            neurons[x][i].updateOutput();
-        }
+    private updateNeuronPotential(x: number, i: number): void {
+        // ta dlouha zavorka
+        const old = this.neurons[x][i].potential;
+        const par = -old
+            - this.A * this.getCityConstraintSum(x, i)
+            - this.B * this.getTimeConstraintSum(x, i)
+            + this.C * this.getTotalOutputSum()
+            - this.D * this.getDistanceConstraintSum(x, i);
+        const value = old + this.dt * par;
+        this.neurons[x][i].setPotential(value);
     }
-}
 
-private void populateDistances(ArrayList<City> cities) {
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
-            distances[i][j] = calculateDistance(cities.get(i), cities.get(j));
+    private getDistanceConstraintSum(x: number, i: number): number {
+        let sum = 0;
+        const maxI = Math.min(i + 1, this.n - 1);
+        const minI = Math.max(i - 1, 0);
+        for (let y = 0; y < this.n; y++) {
+            if (y === x) {
+                continue;
+            }
+            sum += this.distances[x][y] * (this.neurons[y][maxI].output + this.neurons[y][minI].output);
         }
+        return sum;
     }
-}
 
-private void updateNeuronPotential(int x, int i) {
-    // ta dlouha zavorka
-    double old = neurons[x][i].getPotential();
-    double par = -old
-        - A * getCityConstraintSum(x, i)
-        - B * getTimeConstraintSum(x, i)
-        + C * getTotalOutputSum()
-        - D * getDistanceConstraintSum(x, i);
-    double value = old + dt * par;
-    neurons[x][i].setPotential(value);
-}
-
-private double getDistanceConstraintSum(int x, int i) {
-    double sum = 0;
-    int maxI = Math.min(i + 1, n - 1);
-    int minI = Math.max(i - 1, 0);
-    for (int y = 0; y < n; y++) {
-        if (y == x) {
-            continue;
+    private getTotalOutputSum(): number {
+        let sum = 0;
+        for (let x = 0; x < this.n; x++) {
+            for (let i = 0; i < this.n; i++) {
+                sum += this.neurons[x][i].output;
+            }
         }
-        sum += distances[x][y] * (neurons[y][maxI].getOutput() + neurons[y][minI].getOutput());
+        return this.n - sum;
     }
-    return sum;
-}
 
-private double getTotalOutputSum() {
-    double sum = 0;
-    for (int x = 0; x < n; x++) {
-        for (int i = 0; i < n; i++) {
-            sum += neurons[x][i].getOutput();
+    private getTimeConstraintSum(x: number, i: number): number {
+        // pocita aktivace neuronu odpovidajici ruznym mestum jinym nez x v stejnem case i
+        let sum = 0;
+        for (let y = 0; y < this.n; y++) {
+            if (y === x) {
+                continue;
+            }
+            sum += this.neurons[y][i].output;
         }
+        return sum;
     }
-    return n - sum;
-}
 
-private double getTimeConstraintSum(int x, int i) {
-    // pocita aktivace neuronu odpovidajici ruznym mestum jinym nez x v stejnem case i
-    double sum = 0;
-    for (int y = 0; y < n; y++) {
-        if (y == x) {
-            continue;
+    private getCityConstraintSum(x: number, i: number): number {
+        // pocita aktivace neuronu odpovidajici stejnemu mestu v ruznem case jinem nez i
+        let sum = 0;
+        for (let j = 0; j < this.n; j++) {
+            if (j === i) {
+                continue;
+            }
+            sum += this.neurons[x][j].output;
         }
-        sum += neurons[y][i].getOutput();
+        return sum;
     }
-    return sum;
-}
 
-private double getCityConstraintSum(int x, int i) {
-    // pocita aktivace neuronu odpovidajici stejnemu mestu v ruznem case jinem nez i
-    double sum = 0;
-    for (int j = 0; j < n; j++) {
-        if (j == i) {
-            continue;
-        }
-        sum += neurons[x][j].getOutput();
+    private calculateDistance(a: City, b: City): number {
+        return Math.sqrt(Math.pow(b.x - a.x, 2) + Math.pow(b.y - a.y, 2));
     }
-    return sum;
-}
-
-private double calculateDistance(City a, City b) {
-    return Math.sqrt(Math.pow(b.x - a.x, 2) + Math.pow(b.y - a.y, 2));
-}
 }
