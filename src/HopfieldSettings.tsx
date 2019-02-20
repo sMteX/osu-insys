@@ -17,7 +17,7 @@ export default class HopfieldSettings extends React.Component<IProps, IState> {
     this.handleSettingsChange = this.handleSettingsChange.bind(this);
   }
 
-  handleSettingsChange(prop: keyof ISettings) {
+  handleSettingsChange(prop: keyof ISettings): (event: React.FormEvent<HTMLInputElement>) => void {
     return (event: React.FormEvent<HTMLInputElement>) => {
       // @ts-ignore
       this.setState({

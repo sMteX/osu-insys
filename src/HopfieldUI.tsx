@@ -3,6 +3,12 @@ import {Col, Row} from "reactstrap";
 import HopfieldCanvas from "./HopfieldCanvas";
 import HopfieldSettings from "./HopfieldSettings";
 
+export interface ICity {
+  index: number;
+  x: number;
+  y: number;
+}
+
 export interface ISettings {
   dt: number;
   alpha: number;
@@ -25,7 +31,7 @@ export const DEFAULT_SETTINGS: ISettings = {
 
 interface IState {
   settings: ISettings;
-  cities: any[];
+  cities: ICity[];
   paths: any[];
 }
 
@@ -39,6 +45,8 @@ export default class HopfieldUI extends React.Component<{}, IState> {
     };
 
     this.setSettings = this.setSettings.bind(this);
+    this.addCity = this.addCity.bind(this);
+    this.removeCity = this.removeCity.bind(this);
   }
 
   setSettings(newSettings: Partial<ISettings>): void {
@@ -51,6 +59,18 @@ export default class HopfieldUI extends React.Component<{}, IState> {
     });
   }
 
+  addCity(city: ICity) {
+    this.setState(prevState => ({
+      cities: [...prevState.cities, city],
+    }))
+  }
+
+  removeCity(index: number) {
+    this.setState(prevState => ({
+      cities: prevState.cities.filter(c => c.index !== index)
+    }));
+  }
+
   render(): ReactNode {
     return (
       <Row>
@@ -60,7 +80,7 @@ export default class HopfieldUI extends React.Component<{}, IState> {
         </Col>
         <Col md={8}>
           Canvas
-          <HopfieldCanvas cities={this.state.cities} paths={this.state.paths} />
+          <HopfieldCanvas addCity={this.addCity} removeCity={this.removeCity} cities={this.state.cities} paths={this.state.paths} />
         </Col>
       </Row>
     );
