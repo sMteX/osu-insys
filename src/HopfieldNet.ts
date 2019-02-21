@@ -1,13 +1,13 @@
-import { performance } from 'perf_hooks';
 import City from './City';
 import Neuron from './Neuron';
+import {ISettings} from "./HopfieldUI";
 
 export default class HopfieldNet {
     private readonly n: number;
     private readonly neurons: Neuron[][];
     private distances: number[][];
 
-    private readonly maxIter: number;
+    private readonly maxIterations: number;
     private readonly dt: number;
     private readonly alpha: number;
     private readonly A: number;
@@ -16,20 +16,15 @@ export default class HopfieldNet {
     private readonly D: number;
 
     constructor(cities: City[],
-                dt: number,
-                alpha: number,
-                A: number,
-                B: number,
-                C: number,
-                D: number,
-                maxIter: number) {
+                settings: ISettings) {
+        const { dt, alpha, A, B, C, D, maxIterations } = settings;
         this.dt = dt;
         this.alpha = alpha;
         this.A = A;
         this.B = B;
         this.C = C;
         this.D = D;
-        this.maxIter = maxIter;
+        this.maxIterations = maxIterations;
         this.n = cities.length;
         this.neurons = Array.from({ length: this.n }).map(_ => Array.from({ length: this.n }));
         this.distances = Array.from({ length: this.n }).map(_ => Array.from({ length: this.n }));
@@ -40,6 +35,7 @@ export default class HopfieldNet {
     }
 
     public train(): void {
+        console.log('Initial network:', this.toString());
         let iteration = 0;
         const magicCondition = true;
         const start = performance.now();
@@ -47,8 +43,7 @@ export default class HopfieldNet {
         let minE = Number.MAX_VALUE;
         let minIt = 0;
         let minNeurons: Neuron[][] = [];
-
-        while (iteration < this.maxIter && magicCondition) {
+        while (iteration < this.maxIterations && magicCondition) {
             this.iterate();
             const t = performance.now() - start;
             const e = this.E;
@@ -95,7 +90,7 @@ export default class HopfieldNet {
     }
 
     private stringifyNeurons(neurons: Neuron[][]): string {
-        const rows = neurons.map(row => `[${row.map(neuron => neuron.output).join(', ')}]`);
+        const rows = neurons.map(row => `[${row.map(neuron => neuron.output.toFixed(4)).join(', ')}]`);
         return `[${rows.join('\n')}]`;
     }
 
@@ -112,7 +107,7 @@ export default class HopfieldNet {
         // nahodne iteruji vsemi n*n neurony
         const combinations = [];
         for (let i = 0; i < this.n; i++) {
-            for (let j = 0; j < this.n; i++) {
+            for (let j = 0; j < this.n; j++) {
                 combinations.push([i, j]);
             }
         }
