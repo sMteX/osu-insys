@@ -1,44 +1,44 @@
 #ifndef CODE_H
 #define CODE_H
 
-#define Maxsize 30
+#define MAX_SIZE 30
 
-class neuron {
+class Neuron {
     protected:
-        int cit, ord;
+        int city, order;
         float output;
         float activation;
         friend class HP_network;
     public:
-        neuron() {};
-        void getnrn(int, int);
+        Neuron() {};
+        void initializeNeuron(int, int);
 }
 
 class HP_network {
     public:
-        int cityno;
-        float a, b, c, d, totout, distnce;
+        int cityCount;
+        float a, b, c, d, totalOutput, totalDistance;
 
-        neuron tnrn[Maxsize][Maxsize];
-        int dist[Maxsize][Maxsize];
-        int tourcity[Maxsize];
-        int tourorder[Maxsize];
-        float outs[Maxsize][Maxsize];
-        float acts[Maxsize][Maxsize];
-        float weight[Maxsize * Maxsize][Maxsize * Maxsize];
-        float citouts[Maxsize];
-        float ordouts[Maxsize];
+        Neuron neurons[MAX_SIZE][MAX_SIZE];
+        int dist[MAX_SIZE][MAX_SIZE];
+        int tourcity[MAX_SIZE];
+        int tourorder[MAX_SIZE];
+        float outs[MAX_SIZE][MAX_SIZE];
+        float acts[MAX_SIZE][MAX_SIZE];
+        float weight[MAX_SIZE * MAX_SIZE][MAX_SIZE * MAX_SIZE];
+        float citouts[MAX_SIZE];
+        float ordouts[MAX_SIZE];
         float energy;
 
         HP_network() {};
-        void getnwk(int, float, float, float, float);
-        void initdist(int);
-        void findtour();
-        void asgninpt(float*);
-        void calcdist();
+        void initializeNetwork(int, float, float, float, float);
+        void initializeDistances(int);
+        void findTour();
+        void assignInputs(float*);
+        void calculateTotalDistance();
         void iterate(int, int, float, float, float);
-        void getacts(int, float, float);
-        void getouts(float);
-        float getenergy();
+        void calculateActivations(int, float, float);
+        void calculateOutputs(float);
+        float getEnergy();
 };
 #endif
