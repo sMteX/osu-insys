@@ -51,16 +51,16 @@ void HP_network::initializeDistances() {
     }
 
     for (i = 0; i < this->cityCount; ++i) {
-        this->dist[i][i] = 0;
+        this->distances[i][i] = 0;
         for (j = i + 1; j < this->cityCount; ++j) {
-            this->dist[i][j] = calculateDistance(ordinate[i][0], ordinate[j][0], ordinate[i][1], ordinate[j][1]) / 1;
+            this->distances[i][j] = calculateDistance(ordinate[i][0], ordinate[j][0], ordinate[i][1], ordinate[j][1]) / 1;
         }
     }
 
     for (i = 0; i < this->cityCount; ++i) {
-        this->dist[i][i] = 0;
+        this->distances[i][i] = 0;
         for (j = 0; j < i; ++j) {
-            this->dist[i][j] = dist[j][i];
+            this->distances[i][j] = distances[j][i];
         }
     }
 }
@@ -102,7 +102,7 @@ void HP_network::initializeNetwork(int numberOfCities, float a, float b, float c
                     this->weight[t1][t2] = -this->a * t3 * (1 - t4)
                                      -this->b * t4 * (1 - t3)
                                      -this->c
-                                     -this->d * this->dist[i][k] * (t5 + t6) / 100;
+                                     -this->d * this->distances[i][k] * (t5 + t6) / 100;
                 }
             }
         }
@@ -115,7 +115,7 @@ void HP_network::assignInputs(float *inputVector) {
 
     for (i = 0; i < this->cityCount; ++i) {
         for (j = 0; j < this->cityCount; ++j) {
-            this->acts[i][j] = 0.0;
+            this->activations[i][j] = 0.0;
         }
     }
 
@@ -126,7 +126,7 @@ void HP_network::assignInputs(float *inputVector) {
             for (k = 0; k < this->cityCount; ++k) {
                 for (l = 0; l < this->cityCount; ++l) {
                     t2 = l + k * this->cityCount;
-                    this->acts[i][j] += this->weight[t1][t2] * inputVector[t1];
+                    this->activations[i][j] += this->weight[t1][t2] * inputVector[t1];
                 }
             }
         }
@@ -144,13 +144,13 @@ void HP_network::calculateActivations(int nprm) {
         p = (i == this->cityCount - 1) ? 0 : i + 1;
         q = (i == 0) ? this->cityCount - 1; i - 1;
         for (j = 0; j < this->cityCount; ++j) {
-            r1 = this->citouts[i] - this->outs[i][j];
-            r2 = this->ordouts[j] - this->outs[i][j];
+            r1 = this->cityOutputs[i] - this->outputs[i][j];
+            r2 = this->orderOutputs[j] - this->outputs[i][j];
             for (k = 0; k < this->cityCount; ++k) {
-                r4 += this->dist[i][k] * (this->outs[k][p] + this->outs[k][q]) / 100;
+                r4 += this->distances[i][k] * (this->outputs[k][p] + this->outputs[k][q]) / 100;
             }
-            r5 = this->dt * (-this->acts[i][j] / this->tau - this->a * r1 - this->b * r2 - this->c * r3 - this->d * r4);
-            this->acts[i][j] += r5;
+            r5 = this->dt * (-this->activations[i][j] / this->tau - this->a * r1 - this->b * r2 - this->c * r3 - this->d * r4);
+            this->activations[i][j] += r5;
         }
     }
 }
@@ -162,21 +162,21 @@ void HP_network::calculateOutputs() {
     this->totalOutput = 0.0;
 
     for (i = 0; i < this->cityCount; ++i) {
-        this->citouts[i] = 0.0;
+        this->cityOutputs[i] = 0.0;
         for (j = 0; j < this->cityCount; ++j) {
-            b1 = this->lambda * this->acts[i][j];
+            b1 = this->lambda * this->activations[i][j];
             b4 = b1;
             b2 = exp(b4);
             b3 = exp(-b4);
-            this->outs[i][j] = (float)(1.0 + (b2 - b3)/(b2 + b3)) / 2.0;
-            this->citouts[i] += this->outs[i][j];
+            this->outputs[i][j] = (float)(1.0 + (b2 - b3)/(b2 + b3)) / 2.0;
+            this->cityOutputs[i] += this->outputs[i][j];
         }
-        this->totalOutput += this->citouts[i];
+        this->totalOutput += this->cityOutputs[i];
     }
     for (j = 0; j < this->cityCount; ++j) {
-        this->ordouts[j] = 0.0;
+        this->orderOutputs[j] = 0.0;
         for (i = 0; i < this->cityCount; ++i) {
-            this->ordouts[j] += this->outs[i][j];
+            this->orderOutputs[j] += this->outputs[i][j];
         }
     }
 }
@@ -195,12 +195,12 @@ float HP_network::getEnergy() {
         p = (i == this->cityCount - 1) ? 0 : i + 1;
         q = (i == 0) ? this->cityCount - 1: i - 1;
         for (j = 0; j < this->cityCount; ++j) {
-            t3 += this->outs[i][j];
+            t3 += this->outputs[i][j];
             for (k = 0; k < this->cityCount; ++k) {
                 if (k != j) {
-                    t1 += this->outs[i][j] * this->outs[i][k];
-                    t2 += this->outs[j][i] * this->outs[k][i];
-                    t4 += this->dist[k][j] * this->outs[k][i] * (this->outs[j][p] + this->outs[j][q]) / 10;
+                    t1 += this->outputs[i][j] * this->outputs[i][k];
+                    t2 += this->outputs[j][i] * this->outputs[k][i];
+                    t4 += this->distances[k][j] * this->outputs[k][i] * (this->outputs[j][p] + this->outputs[j][q]) / 10;
                 }
             }
         }
@@ -225,13 +225,13 @@ void HP_network::findTour() {
         tmp = -10.0;
         for (j = 0; j < this->cityCount; ++j) {
             for (k = 0; k < this->cityCount; ++k) {
-                if (this->outs[i][k] >= tmp && tag[i][k] == 0) {
-                    tmp = this->outs[i][k];
+                if (this->outputs[i][k] >= tmp && tag[i][k] == 0) {
+                    tmp = this->outputs[i][k];
                 }
             }
-            if (this->outs[i][j] == tmp && tag[i][j] == 0) {
-                this->tourcity[i] = j;
-                this->tourorder[j] = i;
+            if (this->outputs[i][j] == tmp && tag[i][j] == 0) {
+                this->tourByCity[i] = j;
+                this->tourByOrder[j] = i;
                 for (k = 0; k < this->cityCount; ++k) {
                     tag[i][k] = 1;
                     tag[k][j] = 1;
@@ -247,9 +247,9 @@ void HP_network::calculateTotalDistance() {
     this->totalDistance = 0.0;
 
     for (i = 0; i < this->cityCount; ++i) {
-        k = this->tourorder[i];
-        l = (i == this->cityCount - 1) ? this->tourorder[0] : this->tourorder[i + 1];
-        this->totalDistance += this->dist[k][l];
+        k = this->tourByOrder[i];
+        l = (i == this->cityCount - 1) ? this->tourByOrder[0] : this->tourByOrder[i + 1];
+        this->totalDistance += this->distances[k][l];
     }
 }
 

@@ -21,14 +21,14 @@ class HP_network {
         float totalOutput, totalDistance;
 
         Neuron neurons[MAX_SIZE][MAX_SIZE];
-        int dist[MAX_SIZE][MAX_SIZE];
-        int tourcity[MAX_SIZE];
-        int tourorder[MAX_SIZE];
-        float outs[MAX_SIZE][MAX_SIZE];
-        float acts[MAX_SIZE][MAX_SIZE];
+        int distances[MAX_SIZE][MAX_SIZE];
+        int tourByCity[MAX_SIZE];
+        int tourByOrder[MAX_SIZE];
+        float outputs[MAX_SIZE][MAX_SIZE];
+        float activations[MAX_SIZE][MAX_SIZE];
         float weight[MAX_SIZE * MAX_SIZE][MAX_SIZE * MAX_SIZE];
-        float citouts[MAX_SIZE];
-        float ordouts[MAX_SIZE];
+        float cityOutputs[MAX_SIZE];
+        float orderOutputs[MAX_SIZE];
         float energy;
 
         HP_network() {};
