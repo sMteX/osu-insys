@@ -13,6 +13,7 @@ int kroneckerDelta(int i, int j) {
     return 0;
 }
 
+// calculate distance between 2 points
 int calculateDistance(int x1, int x2, int y1, int y2) {
     int dx, dy, d;
 
@@ -23,6 +24,7 @@ int calculateDistance(int x1, int x2, int y1, int y2) {
     return d;
 }
 
+// initialize neuron variables
 int Neuron::initializeNeuron(int i, int j) {
     this->city = i;
     this->order = j;
@@ -30,46 +32,56 @@ int Neuron::initializeNeuron(int i, int j) {
     this->activation = 0.0;
 }
 
+// initialize distances between cities
 void HP_network::initializeDistances() {
     int i, j;
     int rows = this->cityCount;
     int cols = 2;
-    int **ordinate;
+    int **coordinates;
     int **row;
 
-    ordinate = (int**) malloc((rows + 1) * sizeof(int*));
+    // allocate coordinates - cityCount x 2
+    coordinates = (int**) malloc((rows + 1) * sizeof(int*));
     for (i = 0; i < rows; i++) {
-        ordinate[i] = (int*) malloc(cols * sizeof(int));
+        coordinates[i] = (int*) malloc(cols * sizeof(int));
     }
-    ordinate[rows] = 0;
+    coordinates[rows] = 0; // ?
 
     srand(this->cityCount);
 
+    // generate random coordinates
     for (i = 0; i < rows; ++i) {
-        ordinate[i][0] = rand() % 100;
-        ordinate[i][1] = rand() % 100;
+        coordinates[i][0] = rand() % 100;
+        coordinates[i][1] = rand() % 100;
     }
 
     for (i = 0; i < this->cityCount; ++i) {
+        // diagonal
         this->distances[i][i] = 0;
+        // distances above diagonal
         for (j = i + 1; j < this->cityCount; ++j) {
-            this->distances[i][j] = calculateDistance(ordinate[i][0], ordinate[j][0], ordinate[i][1], ordinate[j][1]) / 1;
+            this->distances[i][j] = calculateDistance(coordinates[i][0], coordinates[j][0], coordinates[i][1], coordinates[j][1]) / 1;
         }
     }
 
+    // iterate again, distances are symmetrical, copy from top part (I doubt the difference is significant though)
     for (i = 0; i < this->cityCount; ++i) {
-        this->distances[i][i] = 0;
+        this->distances[i][i] = 0;  // redundant, doesn't hurt though
         for (j = 0; j < i; ++j) {
             this->distances[i][j] = distances[j][i];
         }
     }
+
+    // tehcnically deallocation of coordinates but hey
 }
 
 // Initialize network with parameters and compute weight matrix
 void HP_network::initializeNetwork(int numberOfCities, float a, float b, float c, float d, float dt, float tau, float lambda) {
-    int i, j, k, l, t1, t2, t3, t4, t5, t6;
-    int p, q;
+    int x, i, y, j;
+    int t1, t2;
+    int jp, jm, Dxy, Dij, Dijm, Dijp;
 
+    // set internal network parameters
     this->cityCount = numberOfCities;
     this->a = a;
     this->b = b;
@@ -81,28 +93,40 @@ void HP_network::initializeNetwork(int numberOfCities, float a, float b, float c
 
     this->initializeDistances();
 
+    // useless neuron initialization, since he directly uses activations and outputs anyway
     for (i = 0; i < this->cityCount; ++i) {
         for (j = 0; j < this->cityCount; ++j) {
             this->neurons[i][j].initializeNeuron(i, j);
         }
     }
 
-    for (i = 0; i < this->cityCount; ++i) {
-        for (j = 0; j < this->cityCount; ++j) {
-            p = (j == this->cityCount - 1) ? 0 : j + 1;
-            q = (j == 0) ? this->cityCount - 1; j - 1;
-            t1 = j + i * this->cityCount;
-            for (k = 0; k < this->cityCount; ++k) {
-                for (l = 0; l < this->cityCount; ++l) {
-                    t2 = l + k * this->cityCount;
-                    t3 = kroneckerDelta(i, k);
-                    t4 = kroneckerDelta(j, l);
-                    t5 = kroneckerDelta(l, p);
-                    t6 = kroneckerDelta(l, q);
-                    this->weight[t1][t2] = -this->a * t3 * (1 - t4)
-                                     -this->b * t4 * (1 - t3)
+    // calculate weight matrix
+    // weight matrix is N^2 * N^2 (connects 2 neurons and each neuron is indexed by 2 variables too)
+    // for indexes - first neuron = Uxi, second neuron = Uyj
+    for (x = 0; x < this->cityCount; ++x) {
+        for (i = 0; i < this->cityCount; ++i) {
+            // encoding first neuron index
+            t1 = i + x * this->cityCount;
+            for (y = 0; y < this->cityCount; ++y) {
+                for (j = 0; j < this->cityCount; ++j) {
+                    // encoding second neuron index
+                    t2 = j + y * this->cityCount;
+                    // j-1 and j+1 actually wrap around the neurons?
+                    jp = (j == this->cityCount - 1) ? 0 : j + 1;
+                    jm = (j == 0) ? this->cityCount - 1; j - 1;
+
+                    Dxy = kroneckerDelta(x, y);
+                    Dij = kroneckerDelta(i, j);
+                    Dijp = kroneckerDelta(i, jp);
+                    Dijm = kroneckerDelta(i, jm);
+
+                    // calculating weight between Uxi and Uyj
+                    this->weight[t1][t2] = -this->a * Dxy * (1 - Dij)
+                                     -this->b * Dij * (1 - Dxy)
                                      -this->c
-                                     -this->d * this->distances[i][k] * (t5 + t6) / 100;
+                                     -this->d * this->distances[x][y] * (Dijp + Dijm) / 100;
+                     // no clue why he divides the distance, but since the distance (or coordinates) are from 0 - 99 range
+                     // maybe to get them to 0 - 1 range
                 }
             }
         }
@@ -111,22 +135,28 @@ void HP_network::initializeNetwork(int numberOfCities, float a, float b, float c
 
 /*===================== Assign initial inputs to the network ===================*/
 void HP_network::assignInputs(float *inputVector) {
-    int i, j, k, l, t1, t2;
+    // inputVector seems to be a vector of random numbers (0;99)/100.0 - 1 = (0;0.99) - 1 = (-1; 0)
+    int x, i, y, j, t1, t2;
 
+    // reset activations for all neurons
     for (i = 0; i < this->cityCount; ++i) {
         for (j = 0; j < this->cityCount; ++j) {
             this->activations[i][j] = 0.0;
         }
     }
 
-    // find initial activations
-    for (i = 0; i < this->cityCount; ++i) {
-        for (j = 0; j < this->cityCount; ++j) {
-            t1 = j + i * this->cityCount;
-            for (k = 0; k < this->cityCount; ++k) {
-                for (l = 0; l < this->cityCount; ++l) {
-                    t2 = l + k * this->cityCount;
-                    this->activations[i][j] += this->weight[t1][t2] * inputVector[t1];
+    // initialize activations - which is a weighted sum of all concerned weights into the single neuron it seems
+    // first, iterate through "target" neurons (which we set the activation of)
+    for (x = 0; x < this->cityCount; ++x) {
+        for (i = 0; i < this->cityCount; ++i) {
+            // coordinate transform
+            t1 = i + x * this->cityCount;
+            // for each target neuron, iterate through all neurons again (Hopfield net is fully connected)
+            for (y = 0; y < this->cityCount; ++y) {
+                for (j = 0; j < this->cityCount; ++j) {
+                    t2 = j + y * this->cityCount;
+                    // activation is sum of all weights going into the neuron multiplied by the input of target neuron
+                    this->activations[x][i] += this->weight[t1][t2] * inputVector[t1];
                 }
             }
         }
