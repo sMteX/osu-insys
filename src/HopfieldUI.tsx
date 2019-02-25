@@ -23,12 +23,12 @@ export interface ISettings {
 
 export const DEFAULT_SETTINGS: ISettings = {
   dt: 0.05,
-  alpha: 50,
-  A: 500,
-  B: 500,
-  C: 200,
-  D: 500,
-  maxIterations: 1000,
+  alpha: 3,
+  A: 0.5,
+  B: 0.5,
+  C: 0.2,
+  D: 0.5,
+  maxIterations: 100,
 };
 
 interface IState {

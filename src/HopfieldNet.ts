@@ -33,6 +33,17 @@ export default class HopfieldNet {
     this.setupNeurons();
   }
 
+  private copyNeurons(neurons: Neuron[][]): Neuron[][] {
+    const ret: Neuron[][] = Array.from({length: this.n}).map(_ => Array.from({length: this.n}));
+    for (let x = 0; x < this.n; x++) {
+      for (let i = 0; i < this.n; i++) {
+        ret[x][i] = new Neuron(this.alpha, x, i, neurons[x][i].potential);
+        ret[x][i].updateOutput();
+      }
+    }
+    return ret;
+  };
+
   public train(): void {
     console.log('Initial network:', this.toString());
     let iteration = 0;
@@ -44,18 +55,19 @@ export default class HopfieldNet {
     let minNeurons: Neuron[][] = [];
     while (iteration < this.maxIterations && magicCondition) {
       this.iterate();
+      // console.log(`After ${iteration} iteration:\n`, this.toString());
       const t = performance.now() - start;
       const e = this.E;
       if (e < minE) {
         minE = e;
         minIt = iteration;
-        minNeurons = [...this.neurons];
+        minNeurons = this.copyNeurons(this.neurons);
       }
-      console.log(`Iteration ${iteration} (${t} ms): E = ${e}`);
+      // console.log(`Iteration ${iteration} (${t} ms): E = ${e}`);
       iteration++;
     }
     console.log(`Best iteration: ${minIt}, error: ${minE}`);
-    console.log(`Best neurons: ${HopfieldNet.stringifyNeurons(minNeurons)}`);
+    console.log('Best neurons:\n', HopfieldNet.stringifyNeurons(minNeurons));
   }
 
   private get E(): number {
@@ -81,7 +93,10 @@ export default class HopfieldNet {
         }
       }
     }
-    return (this.A / 2) * Apart + (this.B / 2) * Bpart + (this.C / 2) * Math.pow(this.n - Cpart, 2) + (this.D / 2) * Dpart;
+    return this.A * Apart
+      + this.B * Bpart
+      + this.C * Math.pow(this.n - Cpart, 2)
+      + this.D * Dpart;
   }
 
   public toString(): string {
@@ -113,12 +128,12 @@ export default class HopfieldNet {
     // lepsi by bylo to rozmistit doopravdy nahodne, ale muzu se uchylit i k jednoduchemu reseni a tj
     // na hlavni diagonalu dat 1ky a mimo ni 0
     // v cislech potencialu je to na diagonale dejme tomu random(0.05, 1) a mimo ni random(-1, -0.05) at tam nejsou velke vykyvy
-    const ABS_MIN = 0.05;
-    const ABS_MAX = 1.0;
+    // const ABS_MIN = 0.05;
+    // const ABS_MAX = 1.0;
     for (let x = 0; x < this.n; x++) {
       for (let i = 0; i < this.n; i++) {
-        // const potential = this.randomDoubleInRange(-ABS_MAX, ABS_MAX);
-        const potential = (x === i) ? HopfieldNet.randomDoubleInRange(ABS_MIN, ABS_MAX) : HopfieldNet.randomDoubleInRange(-ABS_MAX, -ABS_MIN);
+        const potential = HopfieldNet.randomDoubleInRange(-1.5, 1.5);
+        // const potential = (x === i) ? HopfieldNet.randomDoubleInRange(ABS_MIN, ABS_MAX) : HopfieldNet.randomDoubleInRange(-ABS_MAX, -ABS_MIN);
         this.neurons[x][i] = new Neuron(this.alpha, x, i, potential);
         this.neurons[x][i].updateOutput();
       }
@@ -137,36 +152,25 @@ export default class HopfieldNet {
   private updateNeuronPotential(x: number, i: number): void {
     // ta dlouha zavorka
     const old = this.neurons[x][i].potential;
-    const par = -old
-      - this.A * this.getCityConstraintSum(x, i)
-      - this.B * this.getTimeConstraintSum(x, i)
-      + this.C * this.getTotalOutputSum()
-      - this.D * this.getDistanceConstraintSum(x, i);
+    let par = -old;
+    par += - this.A * this.getCityConstraintSum(x, i);
+    par += - this.B * this.getTimeConstraintSum(x, i);
+    par += - this.C * this.getTotalOutputSum();
+    par += - this.D * this.getDistanceConstraintSum(x, i);
     const value = old + this.dt * par;
     this.neurons[x][i].setPotential(value);
   }
 
-  private getDistanceConstraintSum(x: number, i: number): number {
+  private getCityConstraintSum(x: number, i: number): number {
+    // pocita aktivace neuronu odpovidajici stejnemu mestu v ruznem case jinem nez i
     let sum = 0;
-    const maxI = Math.min(i + 1, this.n - 1);
-    const minI = Math.max(i - 1, 0);
-    for (let y = 0; y < this.n; y++) {
-      if (y === x) {
+    for (let j = 0; j < this.n; j++) {
+      if (j === i) {
         continue;
       }
-      sum += this.distances[x][y] * (this.neurons[y][maxI].output + this.neurons[y][minI].output);
+      sum += this.neurons[x][j].output;
     }
     return sum;
-  }
-
-  private getTotalOutputSum(): number {
-    let sum = 0;
-    for (let x = 0; x < this.n; x++) {
-      for (let i = 0; i < this.n; i++) {
-        sum += this.neurons[x][i].output;
-      }
-    }
-    return this.n - sum;
   }
 
   private getTimeConstraintSum(x: number, i: number): number {
@@ -181,14 +185,25 @@ export default class HopfieldNet {
     return sum;
   }
 
-  private getCityConstraintSum(x: number, i: number): number {
-    // pocita aktivace neuronu odpovidajici stejnemu mestu v ruznem case jinem nez i
+  private getTotalOutputSum(): number {
     let sum = 0;
-    for (let j = 0; j < this.n; j++) {
-      if (j === i) {
+    for (let x = 0; x < this.n; x++) {
+      for (let i = 0; i < this.n; i++) {
+        sum += this.neurons[x][i].output;
+      }
+    }
+    return this.n - sum;
+  }
+
+  private getDistanceConstraintSum(x: number, i: number): number {
+    let sum = 0;
+    const maxI = Math.min(i + 1, this.n - 1);
+    const minI = Math.max(i - 1, 0);
+    for (let y = 0; y < this.n; y++) {
+      if (y === x) {
         continue;
       }
-      sum += this.neurons[x][j].output;
+      sum += this.distances[x][y] * (this.neurons[y][maxI].output + this.neurons[y][minI].output);
     }
     return sum;
   }
@@ -212,6 +227,6 @@ export default class HopfieldNet {
   }
 
   private static calculateDistance(a: City, b: City): number {
-    return Math.sqrt(Math.pow(b.x - a.x, 2) + Math.pow(b.y - a.y, 2));
+    return Math.sqrt(Math.pow(b.x / 500 - a.x / 500, 2) + Math.pow(b.y / 500 - a.y / 500, 2));
   }
 }

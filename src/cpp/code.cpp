@@ -1,4 +1,6 @@
 #include "code.h"
+// https://books.google.cz/books?id=Zz27CgAAQBAJ&pg=PA167&lpg=PA167#v=onepage&q&f=false
+// original, in case I really did make a mistake
 
 // returns random number between 1 and max (exclusive)
 int randomNumber(int max) {

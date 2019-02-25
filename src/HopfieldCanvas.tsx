@@ -1,5 +1,5 @@
 import React from 'react';
-import {Circle, Layer, Rect, Stage} from "react-konva";
+import {Circle, Layer, Rect, Stage, Text} from "react-konva";
 import * as Konva from "konva";
 import {ICity} from "./HopfieldUI";
 
@@ -52,15 +52,26 @@ export default class HopfieldCanvas extends React.Component<IProps, {}> {
             height={500}
             stroke="black"
           />
-          {this.props.cities.map(({index, x, y}) => (
-            <Circle
-              x={x}
-              y={y}
-              radius={8}
-              fill="red"
-              onClick={this.handleCityClick(index)}
-            />
-          ))}
+          {this.props.cities.map(({index, x, y}) => {
+            const shiftX = index >= 10 ? -7 : -3;
+            const shiftY = -18;
+            return (
+              <React.Fragment key={index}>
+                <Circle
+                  x={x}
+                  y={y}
+                  radius={8}
+                  fill="red"
+                  onClick={this.handleCityClick(index)}
+                />
+                <Text
+                  text={index.toString()}
+                  x={x + shiftX}
+                  y={y + shiftY}
+                />
+              </React.Fragment>
+            )
+          })}
         </Layer>
       </Stage>
     );
