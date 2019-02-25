@@ -76,7 +76,7 @@ void HP_network::initializeDistances() {
 }
 
 // Initialize network with parameters and compute weight matrix
-void HP_network::initializeNetwork(int numberOfCities, float a, float b, float c, float d, float dt, float tau, float lambda) {
+void HP_network::initializeNetwork(int numberOfCities, float a, float b, float c, float d, float dt, float tau, float alpha) {
     int x, i, y, j;
     int t1, t2;
     int jp, jm, Dxy, Dij, Dijm, Dijp;
@@ -89,7 +89,7 @@ void HP_network::initializeNetwork(int numberOfCities, float a, float b, float c
     this->d = d;
     this->dt = dt;
     this->tau = tau;
-    this->lambda = lambda;
+    this->alpha = alpha;
 
     this->initializeDistances();
 
@@ -164,49 +164,56 @@ void HP_network::assignInputs(float *inputVector) {
 }
 
 /* ======== Compute the activation function outputs ======================*/
-void HP_network::calculateActivations(int nprm) {
-    int i, j, k, p, q;
-    float r1, r2, r3, r4, r5;
-    r3 = this->totalOutput - nprm;
+void HP_network::calculateActivations() {
+    int x, i, y, jp, jm;
+    float cityConstraint, timeConstraint, totalConstraint, distanceConstraint, delta;
+    totalConstraint = this->totalOutput - this->cityCount;
 
-    for (i = 0; i < this->cityCount; ++i) {
-        r4 = 0.0;
-        p = (i == this->cityCount - 1) ? 0 : i + 1;
-        q = (i == 0) ? this->cityCount - 1; i - 1;
-        for (j = 0; j < this->cityCount; ++j) {
-            r1 = this->cityOutputs[i] - this->outputs[i][j];
-            r2 = this->orderOutputs[j] - this->outputs[i][j];
-            for (k = 0; k < this->cityCount; ++k) {
-                r4 += this->distances[i][k] * (this->outputs[k][p] + this->outputs[k][q]) / 100;
+    for (x = 0; x < this->cityCount; ++x) {
+        for (i = 0; i < this->cityCount; ++i) {
+            distanceConstraint = 0.0;
+            jp = (i == this->cityCount - 1) ? 0 : i + 1;
+            jm = (i == 0) ? this->cityCount - 1; i - 1;
+            cityConstraint = this->cityOutputs[x] - this->outputs[x][i];
+            timeConstraint = this->orderOutputs[i] - this->outputs[x][i];
+            for (y = 0; y < this->cityCount; ++y) {
+                distanceConstraint += this->distances[x][y] * (this->outputs[y][jp] + this->outputs[y][jm]) / 100;
             }
-            r5 = this->dt * (-this->activations[i][j] / this->tau - this->a * r1 - this->b * r2 - this->c * r3 - this->d * r4);
-            this->activations[i][j] += r5;
+            delta = this->dt * (- this->activations[x][i] / this->tau
+                             - this->a * cityConstraint
+                             - this->b * timeConstraint
+                             - this->c * totalConstraint
+                             - this->d * distanceConstraint);
+            this->activations[x][i] += delta;
         }
     }
 }
 
 /*========== Get Neural Network Output =============================*/
 void HP_network::calculateOutputs() {
-    double b1, b2, b3, b4;
-    int i, j;
+    double arg, ex, emx;
+    int x, i;
     this->totalOutput = 0.0;
 
-    for (i = 0; i < this->cityCount; ++i) {
-        this->cityOutputs[i] = 0.0;
-        for (j = 0; j < this->cityCount; ++j) {
-            b1 = this->lambda * this->activations[i][j];
-            b4 = b1;
-            b2 = exp(b4);
-            b3 = exp(-b4);
-            this->outputs[i][j] = (float)(1.0 + (b2 - b3)/(b2 + b3)) / 2.0;
-            this->cityOutputs[i] += this->outputs[i][j];
-        }
-        this->totalOutput += this->cityOutputs[i];
-    }
-    for (j = 0; j < this->cityCount; ++j) {
-        this->orderOutputs[j] = 0.0;
+    for (x = 0; x < this->cityCount; ++x) {
+        // cityOutputs[x] represents total sum of outputs for a city x
+        this->cityOutputs[x] = 0.0;
         for (i = 0; i < this->cityCount; ++i) {
-            this->orderOutputs[j] += this->outputs[i][j];
+            // (e^x - e^-x)/(e^x + e^-x) is just a different formula of tanh(x) so it checks out
+            arg = this->alpha * this->activations[x][i];
+            ex = exp(arg);
+            emx = exp(-arg);
+            this->outputs[x][i] = (float)(1.0 + (ex - emx)/(ex + emx)) / 2.0;
+            this->cityOutputs[x] += this->outputs[x][i];
+        }
+        // total output is just sum of all city outputs
+        this->totalOutput += this->cityOutputs[x];
+    }
+    for (i = 0; i < this->cityCount; ++i) {
+        // orderOutputs[x] is sum of outputs for time/order x
+        this->orderOutputs[i] = 0.0;
+        for (x = 0; x < this->cityCount; ++x) {
+            this->orderOutputs[i] += this->outputs[x][i];
         }
     }
 }
@@ -243,28 +250,35 @@ float HP_network::getEnergy() {
 
 /*========== Find a valid tour ==========*/
 void HP_network::findTour() {
-    int i, j, k, tag[MAX_SIZE][MAX_SIZE];
-    float tmp;
-    for (i = 0; i < this->cityCount; ++i) {
-        for (j = 0; j < this->cityCount; ++j) {
-            this->tag[i][j] = 0;
+    // tag is an array of "checked neurons"
+    int x, i, k, tag[MAX_SIZE][MAX_SIZE];
+    float maxForCity;
+    for (x = 0; x < this->cityCount; ++x) {
+        for (i = 0; i < this->cityCount; ++i) {
+            this->tag[x][i] = 0;
         }
     }
 
-    for (i = 0; i < this->cityCount; ++i) {
-        tmp = -10.0;
-        for (j = 0; j < this->cityCount; ++j) {
+    // for each city
+    for (x = 0; x < this->cityCount; ++x) {
+        // keep track of maximum output of neurons for that city
+        maxForCity = -10.0;
+        for (i = 0; i < this->cityCount; ++i) {
+            // first, iterate through the row, find maximum output in UNVISITED neurons
             for (k = 0; k < this->cityCount; ++k) {
-                if (this->outputs[i][k] >= tmp && tag[i][k] == 0) {
-                    tmp = this->outputs[i][k];
+                if (this->outputs[x][k] >= maxForCity && tag[x][k] == 0) {
+                    maxForCity = this->outputs[x][k];
                 }
             }
-            if (this->outputs[i][j] == tmp && tag[i][j] == 0) {
-                this->tourByCity[i] = j;
-                this->tourByOrder[j] = i;
+            // if the neuron is the maximum and is unvisited
+            if (this->outputs[x][i] == maxForCity && tag[x][i] == 0) {
+                // mark the neuron as part of paths
+                this->tourByCity[x] = i;
+                this->tourByOrder[i] = x;
+                // tag all other neurons for the same city or time as visited (there can no longer be a maximum found)
                 for (k = 0; k < this->cityCount; ++k) {
-                    tag[i][k] = 1;
-                    tag[k][j] = 1;
+                    tag[x][k] = 1;
+                    tag[k][i] = 1;
                 }
             }
         }
@@ -284,18 +298,20 @@ void HP_network::calculateTotalDistance() {
 }
 
 /* ============== Iterate the network specified number of times =========*/
-void HP_network::iterate(int maxIterations, int nprm) {
+void HP_network::iterate(int maxIterations) {
     int k;
     double oldEnergy, newEnergy;
+    double THRESHOLD = 0.0000001;
+
     oldEnergy = this->getEnergy();
     k = 0;
 
     do {
-        this->calculateActivations(nprm);
+        this->calculateActivations();
         this->calculateOutputs();
         newEnergy = this->getEnergy();
 
-        if (oldEnergy - newEnergy < 0.0000001) {
+        if (oldEnergy - newEnergy < THRESHOLD) {
             break;
         }
 
@@ -305,33 +321,32 @@ void HP_network::iterate(int maxIterations, int nprm) {
 }
 
 void main() {
-    int nprm = 15;
     float a = 0.5;
     float b = 0.5;
     float c = 0.2;
     float d = 0.5;
     float dt = 0.01;
     float tau = 1;
-    float lambda = 3.0;
+    float alpha = 3.0;
     float i, n2;
-    int numit = 4000;
+    int maxIterations = 4000;
     int cityCount = 15;
-    float input_vector[MAX_SIZE * MAX_SIZE];
+    float inputVector[MAX_SIZE * MAX_SIZE];
     double dif;
 
     n2 = cityCount * cityCount;
     for (i = 0; i < n2; ++i) {
-        input_vector[i] = (float)(randomNumber(100)/100.0) - 1;
+        inputVector[i] = (float)(randomNumber(100)/100.0) - 1;
     }
 
     // create HP_network and operate
 
-    HP_network *TSP_NW = new HP_network;
+    HP_network *network = new HP_network;
 
-    TSP_NW->initializeNetwork(cityCount, a, b, c, d, dt, tau, lambda);
-    TSP_NW->assignInputs(input_vector);
-    TSP_NW->calculateOutputs();
-    TSP_NW->iterate(numit, nprm);
-    TSP_NW->findTour();
-    TSP_NW->calculateTotalDistance();
+    network->initializeNetwork(cityCount, a, b, c, d, dt, tau, alpha);
+    network->assignInputs(inputVector);
+    network->calculateOutputs();
+    network->iterate(maxIterations);
+    network->findTour();
+    network->calculateTotalDistance();
 }

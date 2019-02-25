@@ -17,7 +17,7 @@ class Neuron {
 class HP_network {
     public:
         int cityCount;
-        float a, b, c, d, dt, tau, lambda;
+        float a, b, c, d, dt, tau, alpha;
         float totalOutput, totalDistance;
 
         Neuron neurons[MAX_SIZE][MAX_SIZE];
@@ -37,8 +37,8 @@ class HP_network {
         void findTour();
         void assignInputs(float*);
         void calculateTotalDistance();
-        void iterate(int, int);
-        void calculateActivations(int);
+        void iterate(int);
+        void calculateActivations();
         void calculateOutputs();
         float getEnergy();
 };
