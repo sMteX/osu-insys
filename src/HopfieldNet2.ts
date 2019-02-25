@@ -18,6 +18,9 @@ export default class HopfieldNet2 {
 
   private readonly distances: number[][];
 
+  private readonly tourByCity: number[];
+  private readonly tourByTime: number[];
+
   private readonly maxIterations: number;
   private readonly dt: number;
   private readonly alpha: number;
@@ -27,15 +30,10 @@ export default class HopfieldNet2 {
   private readonly C: number;
   private readonly D: number;
 
+  private isTourFound: boolean = false;
+
   constructor(cities: City[],
               settings: ISettings2) {
-    const initializeArray = (n: number): number[] => {
-      return Array.from({ length: n });
-    };
-    const initializeSquareMatrix = (n: number): number[][] => {
-      return initializeArray(n).map(_ => initializeArray(n));
-    };
-
     const {dt, alpha, A, B, C, D, maxIterations, tau} = settings;
     this.dt = dt;
     this.alpha = alpha;
@@ -47,14 +45,17 @@ export default class HopfieldNet2 {
     this.maxIterations = maxIterations;
     this.n = cities.length;
 
-    this.weights = initializeSquareMatrix(this.n * this.n);
-    this.activations = initializeSquareMatrix(this.n);
-    this.outputs = initializeSquareMatrix(this.n);
-    this.cityOutputs = initializeArray(this.n);
-    this.timeOutputs = initializeArray(this.n);
+    this.weights = HopfieldNet2.initializeSquareMatrix(this.n * this.n);
+    this.activations = HopfieldNet2.initializeSquareMatrix(this.n);
+    this.outputs = HopfieldNet2.initializeSquareMatrix(this.n);
+    this.cityOutputs = HopfieldNet2.initializeArray(this.n);
+    this.timeOutputs = HopfieldNet2.initializeArray(this.n);
     this.totalOutput = 0;
 
-    this.distances = initializeSquareMatrix(this.n);
+    this.distances = HopfieldNet2.initializeSquareMatrix(this.n);
+
+    this.tourByCity = HopfieldNet2.initializeArray(this.n);
+    this.tourByTime = HopfieldNet2.initializeArray(this.n);
 
     this.populateDistances(cities);
     this.setupNeurons();
@@ -67,8 +68,8 @@ export default class HopfieldNet2 {
     let t4 = 0.0;
 
     for (let i = 0; i < this.n; i++) {
-      const p = (i == this.n - 1) ? 0 : i + 1;
-      const q = (i == 0) ? this.n - 1: i - 1;
+      const p = (i === this.n - 1) ? 0 : i + 1;
+      const q = (i === 0) ? this.n - 1: i - 1;
       for (let j = 0; j < this.n; j++) {
         t3 += this.outputs[i][j];
         for (let k = 0; k < this.n; k++) {
@@ -90,8 +91,8 @@ export default class HopfieldNet2 {
       for (let i = 0; i < this.n; i++) {
         let distanceConstraint = 0.0;
 
-        const jp = (i == this.n - 1) ? 0 : i + 1;
-        const jm = (i == 0) ? this.n - 1 : i - 1;
+        const jp = (i === this.n - 1) ? 0 : i + 1;
+        const jm = (i === 0) ? this.n - 1 : i - 1;
 
         const cityConstraint = this.cityOutputs[x] - this.outputs[x][i];
         const timeConstraint = this.timeOutputs[i] - this.outputs[x][i];
@@ -130,6 +131,69 @@ export default class HopfieldNet2 {
       oldEnergy = newEnergy;
       i++;
     } while (i < this.maxIterations);
+    
+    this.findTour();
+  }
+  
+  private findTour(): void {
+    // tag is an array of "checked neurons"
+    const tag = HopfieldNet2.initializeSquareMatrix(this.n);
+    const max = {
+      value: <number> -10.0,
+      x: <number | null> null,
+      i: <number | null> -1,
+    };
+
+    for (let x = 0; x < this.n; x++) {
+      for (let i = 0; i < this.n; i++) {
+        tag[x][i] = 0;
+      }
+    }
+
+    // for each city
+    for (let x = 0; x < this.n; x++) {
+      // keep track of maximum output of neurons for that city
+      max.value = -10.0;
+      for (let i = 0; i < this.n; i++) {
+        // first, iterate through the row, find maximum output in UNVISITED neurons
+        for (let k = 0; k < this.n; k++) {
+          if (this.outputs[x][k] >= max.value && tag[x][k] === 0) {
+            max.value = this.outputs[x][k];
+            max.x = x;
+            max.i = k;
+          }
+        }
+        // if the neuron is the maximum and is unvisited
+        if (x === max.x && i === max.i && tag[x][i] === 0) {
+          // mark the neuron as part of paths
+          this.tourByCity[x] = i;
+          this.tourByTime[i] = x;
+          // tag all other neurons for the same city or time as visited (there can no longer be a maximum found)
+          for (let k = 0; k < this.n; k++) {
+            tag[x][k] = 1;
+            tag[k][i] = 1;
+          }
+        }
+      }
+    }
+
+    this.isTourFound = true;
+  }
+
+  public get totalDistance(): number {
+    if (!this.isTourFound) {
+      throw new Error("Tour wasn't found yet");
+    }
+
+    let totalDistance = 0.0;
+
+    for (let i = 0; i < this.n; i++) {
+      const k = this.tourByTime[i];
+      const l = (i === this.n - 1) ? this.tourByTime[0] : this.tourByTime[i + 1];
+      totalDistance += this.distances[k][l];
+    }
+
+    return totalDistance;
   }
 
   private setupNeurons(): void {
@@ -172,7 +236,7 @@ export default class HopfieldNet2 {
 
   private assignInputs(): void {
     // initialize a random NxN matrix of values (-1, 0) ?
-    const inputMatrix: number[][] = [];
+    const inputMatrix: number[][] = HopfieldNet2.initializeSquareMatrix(this.n);
     for (let i = 0; i < this.n; i++) {
       inputMatrix[i] = [];
       for (let j = 0; j < this.n; j++) {
@@ -241,5 +305,13 @@ export default class HopfieldNet2 {
 
   private static calculateDistance(a: City, b: City, divider: number) {
     return Math.sqrt(Math.pow((a.x - b.x) / divider, 2) + Math.pow((a.y - b.y) / divider, 2));
+  }
+
+  private static initializeArray(n: number): number[] {
+    return Array.from({ length: n });
+  }
+
+  private static initializeSquareMatrix(n: number): number[][] {
+    return HopfieldNet2.initializeArray(n).map(_ => HopfieldNet2.initializeArray(n));
   }
 }
