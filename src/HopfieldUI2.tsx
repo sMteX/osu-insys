@@ -26,6 +26,7 @@ export interface ISettings {
   D: number;
   maxIterations: number;
   tau: number;
+  advanced: boolean;
 }
 
 export const DEFAULT_SETTINGS: ISettings = {
@@ -37,6 +38,7 @@ export const DEFAULT_SETTINGS: ISettings = {
   D: 0.5,
   maxIterations: 1000,
   tau: 1.0,
+  advanced: false,
 };
 
 interface IState {
@@ -89,17 +91,21 @@ export default class HopfieldUI extends React.Component<{}, IState> {
   async findPaths(): Promise<void> {
     const cities = this.state.cities.map(({x, y}) => new City(x, y));
     const net = new HopfieldNet(cities, this.state.settings);
-    console.log("Please wait...");
-    const { paths, distance, k } = await net.train2();
-    console.log(`Finished, found min in iteration ${k}`);
-    this.setPaths(paths);
-    this.setState({ totalDistance: distance });
-    // net.train();
-    // this.setPaths(net.tourByTime);
-    // const totalDistance = net.totalDistance;
-    // this.setState({
-    //   totalDistance: totalDistance,
-    // });
+    if (this.state.settings.advanced) {
+      console.log("Please wait...");
+      const { paths, distance, k } = await net.train2();
+      console.log(`Finished, found min in iteration ${k}`);
+      this.setPaths(paths);
+      this.setState({ totalDistance: distance });
+    }
+    else {
+      net.train();
+      this.setPaths(net.tourByTime);
+      const totalDistance = net.totalDistance;
+      this.setState({
+        totalDistance: totalDistance,
+      });
+    }
     // console.table(net.tourByTime);
     // console.table(net.outputs);
     // console.log('------------');

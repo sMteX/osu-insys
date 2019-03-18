@@ -32,13 +32,24 @@ export default class HopfieldSettings extends React.Component<IProps, IState> {
 
   handleSettingsChange(prop: keyof ISettings): (event: React.FormEvent<HTMLInputElement>) => void {
     return (event: React.FormEvent<HTMLInputElement>) => {
-      // @ts-ignore
-      this.setState({
-        [prop]: Number(event.currentTarget.value)
-      });
-      this.props.setSettings({
-        [prop]: Number(event.currentTarget.value),
-      })
+      if (prop === 'advanced') {
+        const newAdvanced = !this.state.advanced;
+        this.setState({
+          advanced: newAdvanced,
+        });
+        this.props.setSettings({
+          advanced: newAdvanced,
+        });
+      }
+      else {
+        // @ts-ignore
+        this.setState({
+          [prop]: Number(event.currentTarget.value)
+        });
+        this.props.setSettings({
+          [prop]: Number(event.currentTarget.value),
+        })
+      }
     }
   }
 
@@ -56,7 +67,8 @@ export default class HopfieldSettings extends React.Component<IProps, IState> {
         <label>B:</label> <input type="number" step={0.05} onChange={this.handleSettingsChange('B')} value={this.state.B} /> <br />
         <label>C:</label> <input type="number" step={0.05} onChange={this.handleSettingsChange('C')} value={this.state.C} /> <br />
         <label>D:</label> <input type="number" step={0.05} onChange={this.handleSettingsChange('D')} value={this.state.D} /> <br />
-        <label>max iterations:</label> <input type="number" step={10} onChange={this.handleSettingsChange('maxIterations')} value={this.state.maxIterations} /> <br />
+        <label>max iterations:</label> <input type="number" step={10} onChange={this.handleSettingsChange('maxIterations')} value={this.state.maxIterations} />
+        <input type="checkbox" onChange={this.handleSettingsChange('advanced')} checked={this.state.advanced} /> <br />
         <Button onClick={this.props.findPaths}>Find path</Button>
         <Button onClick={this.setDefaultCities}>Set default cities</Button> <br />
         <Button onClick={this.props.reset}>Reset</Button> <br />

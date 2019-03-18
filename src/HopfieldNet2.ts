@@ -144,7 +144,7 @@ export default class HopfieldNet2 {
     let minPaths: number[] = [];
     let minK = 0;
 
-    for (let k = 0; k < 1000; k++) {
+    for (let k = 0; k < 1500; k++) {
       i = 0;
       this.setupNeurons();
       do {
@@ -275,7 +275,7 @@ export default class HopfieldNet2 {
     for (let i = 0; i < this.n; i++) {
       inputMatrix[i] = [];
       for (let j = 0; j < this.n; j++) {
-        inputMatrix[i][j] = Math.random() * 2 - 1; // -1; 1
+        inputMatrix[i][j] = Math.random(); // -1; 1
       }
     }
     // reset activations for all neurons
