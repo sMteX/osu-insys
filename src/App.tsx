@@ -1,6 +1,7 @@
 import React, {Component} from 'react';
 import {Container, Col} from 'reactstrap';
 import HopfieldUI from './HopfieldUI';
+import HopfieldUI2 from './HopfieldUI2';
 
 class App extends Component {
   render() {
@@ -12,7 +13,8 @@ class App extends Component {
         }}>
           Hello
           <br />
-          <HopfieldUI/>
+          {/*<HopfieldUI />*/}
+          <HopfieldUI2 />
         </Col>
       </Container>
     );

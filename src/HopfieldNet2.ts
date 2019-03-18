@@ -1,16 +1,14 @@
 import City from "./City";
-import {ISettings} from "./HopfieldUI";
+import {ISettings} from "./HopfieldUI2";
 
-interface ISettings2 extends ISettings {
-  tau: number;
-}
+const DIAG_DIST = Math.sqrt(2 * 500 * 500);
 
 export default class HopfieldNet2 {
   private readonly n: number;
 
   private readonly weights: number[][];
   private readonly activations: number[][];
-  private readonly outputs: number[][];
+  public readonly outputs: number[][];
 
   private readonly cityOutputs: number[];
   private readonly timeOutputs: number[];
@@ -19,7 +17,7 @@ export default class HopfieldNet2 {
   private readonly distances: number[][];
 
   private readonly tourByCity: number[];
-  private readonly tourByTime: number[];
+  public readonly tourByTime: number[];
 
   private readonly maxIterations: number;
   private readonly dt: number;
@@ -33,7 +31,7 @@ export default class HopfieldNet2 {
   private isTourFound: boolean = false;
 
   constructor(cities: City[],
-              settings: ISettings2) {
+              settings: ISettings) {
     const {dt, alpha, A, B, C, D, maxIterations, tau} = settings;
     this.dt = dt;
     this.alpha = alpha;
@@ -76,7 +74,7 @@ export default class HopfieldNet2 {
           if (k !== j) {
             t1 += this.outputs[i][j] * this.outputs[i][k];
             t2 += this.outputs[j][i] * this.outputs[k][i];
-            t4 += this.distances[k][j] * this.outputs[k][i] * (this.outputs[j][p] + this.outputs[j][q]);
+            t4 += this.distances[k][j] * this.outputs[k][i] * (this.outputs[j][p] + this.outputs[j][q]) / DIAG_DIST;
           }
         }
       }
@@ -98,7 +96,7 @@ export default class HopfieldNet2 {
         const timeConstraint = this.timeOutputs[i] - this.outputs[x][i];
 
         for (let y = 0; y < this.n; y++) {
-          distanceConstraint += this.distances[x][y] * (this.outputs[y][jp] + this.outputs[y][jm]);
+          distanceConstraint += this.distances[x][y] * (this.outputs[y][jp] + this.outputs[y][jm]) / DIAG_DIST;
         }
 
         const delta = this.dt * (- this.activations[x][i] / this.tau
@@ -133,6 +131,43 @@ export default class HopfieldNet2 {
     } while (i < this.maxIterations);
     
     this.findTour();
+  }
+
+  public train2(): Promise<{ paths: number[], distance: number, k: number }> {
+    let oldEnergy, newEnergy;
+    const THRESHOLD = 0.0000001;
+
+    oldEnergy = this.energy;
+
+    let i = 0;
+    let minDist = Number.MAX_VALUE;
+    let minPaths: number[] = [];
+    let minK = 0;
+
+    for (let k = 0; k < 1000; k++) {
+      i = 0;
+      this.setupNeurons();
+      do {
+        this.calculateActivations();
+        this.calculateOutputs();
+        newEnergy = this.energy;
+
+        if (oldEnergy - newEnergy < THRESHOLD) {
+          break;
+        }
+
+        oldEnergy = newEnergy;
+        i++;
+      } while (i < this.maxIterations);
+      this.findTour();
+      const dist = this.totalDistance;
+      if (dist < minDist) {
+        minDist = dist;
+        minPaths = [...this.tourByTime]; // tourByTime is number[], this should create copy
+        minK = k;
+      }
+    }
+    return Promise.resolve({ paths: minPaths, distance: minDist, k: minK });
   }
   
   private findTour(): void {
@@ -227,7 +262,7 @@ export default class HopfieldNet2 {
             this.weights[t1][t2] = -this.A * Dxy * (1 - Dij)
                                    -this.B * Dij * (1 - Dxy)
                                    -this.C
-                                   -this.D * this.distances[x][y] * (Dijp + Dijm);
+                                   -this.D * this.distances[x][y] * (Dijp + Dijm) / DIAG_DIST;
           }
         }
       }
@@ -240,10 +275,9 @@ export default class HopfieldNet2 {
     for (let i = 0; i < this.n; i++) {
       inputMatrix[i] = [];
       for (let j = 0; j < this.n; j++) {
-        inputMatrix[i][j] = Math.random() - 1;
+        inputMatrix[i][j] = Math.random() * 2 - 1; // -1; 1
       }
     }
-
     // reset activations for all neurons
     for (let i = 0; i < this.n; i++) {
       for (let j = 0; j < this.n; j++) {
@@ -294,7 +328,7 @@ export default class HopfieldNet2 {
   private populateDistances(cities: City[]): void {
     for (let i = 0; i < this.n; i++) {
       for (let j = 0; j < this.n; j++) {
-        HopfieldNet2.calculateDistance(cities[i], cities[j], 500);
+        this.distances[i][j] = HopfieldNet2.calculateDistance(cities[i], cities[j]);
       }
     }
   }
@@ -303,8 +337,8 @@ export default class HopfieldNet2 {
     return (x === y) ? 1 : 0;
   }
 
-  private static calculateDistance(a: City, b: City, divider: number) {
-    return Math.sqrt(Math.pow((a.x - b.x) / divider, 2) + Math.pow((a.y - b.y) / divider, 2));
+  private static calculateDistance(a: City, b: City) {
+    return Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2));
   }
 
   private static initializeArray(n: number): number[] {
@@ -313,5 +347,10 @@ export default class HopfieldNet2 {
 
   private static initializeSquareMatrix(n: number): number[][] {
     return HopfieldNet2.initializeArray(n).map(_ => HopfieldNet2.initializeArray(n));
+  }
+
+  private static stringifyNeurons(outputs: number[][]): string {
+    const rows = outputs.map(row => `[${row.map(output => output.toFixed(4)).join(', ')}]`);
+    return `[${rows.join('\n')}]`;
   }
 }
