@@ -7,7 +7,6 @@ interface IProps {
   setDefaultCities(cities: ICity[]): void;
   reset(): void;
   findPaths(): any;
-  totalDistance?: number;
 }
 
 interface IState extends ISettings {}
@@ -71,8 +70,7 @@ export default class HopfieldSettings extends React.Component<IProps, IState> {
         <input type="checkbox" onChange={this.handleSettingsChange('advanced')} checked={this.state.advanced} /> <br />
         <Button onClick={this.props.findPaths}>Find path</Button>
         <Button onClick={this.setDefaultCities}>Set default cities</Button> <br />
-        <Button onClick={this.props.reset}>Reset</Button> <br />
-        {this.props.totalDistance && (<span>Total distance: {this.props.totalDistance}</span>)}
+        <Button onClick={this.props.reset}>Reset</Button>
       </div>
     );
   }

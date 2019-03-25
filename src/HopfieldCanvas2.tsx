@@ -45,7 +45,7 @@ export default class HopfieldCanvas extends React.Component<IProps, {}> {
 
   handleCityClick(i: number): (event: Konva.KonvaEventObject<MouseEvent>) => void {
     return (event) => {
-      if (event.evt.button === RIGHT_BUTTON) {
+      if (this.props.paths.length === 0 && event.evt.button === RIGHT_BUTTON) {
         this.props.removeCity(i);
       }
     };

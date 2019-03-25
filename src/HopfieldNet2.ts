@@ -133,7 +133,7 @@ export default class HopfieldNet2 {
     this.findTour();
   }
 
-  public train2(): Promise<{ paths: number[], distance: number, k: number }> {
+  public train2(): { paths: number[], distance: number, k: number } {
     let oldEnergy, newEnergy;
     const THRESHOLD = 0.0000001;
 
@@ -167,7 +167,7 @@ export default class HopfieldNet2 {
         minK = k;
       }
     }
-    return Promise.resolve({ paths: minPaths, distance: minDist, k: minK });
+    return { paths: minPaths, distance: minDist, k: minK };
   }
   
   private findTour(): void {

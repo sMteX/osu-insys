@@ -1,8 +1,9 @@
 import React, {ReactNode} from 'react';
-import {Col, Row} from "reactstrap";
+import {Button, Col, Row} from "reactstrap";
 import HopfieldCanvas from "./HopfieldCanvas2";
 import HopfieldSettings from "./HopfieldSettings2";
 import HopfieldNet from "./HopfieldNet2";
+import HopfieldHistory from "./HopfieldHistory";
 import City from "./City";
 
 export interface ICity {
@@ -45,16 +46,28 @@ interface IState {
   settings: ISettings;
   cities: ICity[];
   paths: IPath[];
+  history: IHistoryItem[];
   totalDistance?: number;
 }
 
+export interface IHistoryItem {
+  index: number;
+  cities: ICity[];
+  paths: IPath[];
+  settings: ISettings;
+  distance: number;
+}
+
 export default class HopfieldUI extends React.Component<{}, IState> {
+  private historyI = 0;
+
   constructor(props: any) {
     super(props);
     this.state = {
       settings: DEFAULT_SETTINGS,
       cities: [],
       paths: [],
+      history: [],
     };
 
     this.setSettings = this.setSettings.bind(this);
@@ -62,8 +75,9 @@ export default class HopfieldUI extends React.Component<{}, IState> {
     this.removeCity = this.removeCity.bind(this);
     this.findPaths = this.findPaths.bind(this);
     this.setDefaultCities = this.setDefaultCities.bind(this);
-    this.setPaths = this.setPaths.bind(this);
     this.reset = this.reset.bind(this);
+    this.overrideState = this.overrideState.bind(this);
+    this.clearHistory = this.clearHistory.bind(this);
   }
 
   setSettings(newSettings: Partial<ISettings>): void {
@@ -88,30 +102,43 @@ export default class HopfieldUI extends React.Component<{}, IState> {
     }));
   }
 
-  async findPaths(): Promise<void> {
+  findPaths(): void {
     const cities = this.state.cities.map(({x, y}) => new City(x, y));
     const net = new HopfieldNet(cities, this.state.settings);
+
+    let _paths, _distance;
     if (this.state.settings.advanced) {
       console.log("Please wait...");
-      const { paths, distance, k } = await net.train2();
+      const { paths, distance, k } = net.train2();
       console.log(`Finished, found min in iteration ${k}`);
-      this.setPaths(paths);
-      this.setState({ totalDistance: distance });
+
+      _paths = HopfieldUI.transformPaths(paths);
+      _distance = distance;
     }
     else {
       net.train();
-      this.setPaths(net.tourByTime);
-      const totalDistance = net.totalDistance;
-      this.setState({
-        totalDistance: totalDistance,
-      });
+      _distance = net.totalDistance;
+      _paths = HopfieldUI.transformPaths(net.tourByTime);
     }
-    // console.table(net.tourByTime);
-    // console.table(net.outputs);
-    // console.log('------------');
+
+    const item: IHistoryItem = {
+      index: this.historyI,
+      cities: this.state.cities,
+      paths: _paths,
+      settings: this.state.settings,
+      distance: _distance,
+    };
+    this.historyI++;
+    this.state.history.push(JSON.parse(JSON.stringify(item)));
+
+    this.setState({
+      totalDistance: _distance,
+      paths: _paths,
+    });
+
   }
 
-  setPaths(paths: number[]): void {
+  static transformPaths(paths: number[]): IPath[] {
     const p: IPath[] = [];
     for (let i = 0; i < paths.length; i++) {
       const j = (i === paths.length - 1) ? 0 : i + 1;
@@ -121,9 +148,7 @@ export default class HopfieldUI extends React.Component<{}, IState> {
         endCityIndex: paths[j]
       });
     }
-    this.setState({
-      paths: p,
-    });
+    return p;
   }
 
   setDefaultCities(cities: ICity[]): void {
@@ -134,9 +159,26 @@ export default class HopfieldUI extends React.Component<{}, IState> {
 
   reset(): void {
     this.setState({
+      totalDistance: undefined,
       cities: [],
       paths: [],
     })
+  }
+
+  overrideState(state: IHistoryItem): void {
+    this.setState({
+      paths: state.paths,
+      totalDistance: state.distance,
+      cities: state.cities,
+      settings: state.settings, // TODO: broken, not connected this.state.settings => <HopfieldSettings>
+    });
+  }
+
+  clearHistory(): void {
+    this.historyI = 0;
+    this.setState({
+      history: [],
+    });
   }
 
   render(): ReactNode {
@@ -144,7 +186,11 @@ export default class HopfieldUI extends React.Component<{}, IState> {
       <Row>
         <Col md={4}>
           Settings
-          <HopfieldSettings setSettings={this.setSettings} findPaths={this.findPaths} setDefaultCities={this.setDefaultCities} totalDistance={this.state.totalDistance} reset={this.reset}/>
+          <HopfieldSettings setSettings={this.setSettings} findPaths={this.findPaths} setDefaultCities={this.setDefaultCities} reset={this.reset}/>
+          <Button onClick={this.clearHistory}>Clear history</Button>
+          <br />
+          {this.state.totalDistance && (<span>Total distance: {this.state.totalDistance}</span>)}
+          <HopfieldHistory overrideState={this.overrideState} history={this.state.history.sort((a, b) => b.index - a.index)} />
         </Col>
         <Col md={8}>
           Canvas
