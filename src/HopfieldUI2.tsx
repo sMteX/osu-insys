@@ -1,7 +1,7 @@
 import React, {ReactNode} from 'react';
 import {Button, Col, Row} from "reactstrap";
 import HopfieldCanvas from "./HopfieldCanvas2";
-import HopfieldSettings from "./HopfieldSettings2";
+import HopfieldSettings, {DEFAULT_CITIES} from "./HopfieldSettings2";
 import HopfieldNet from "./HopfieldNet2";
 import HopfieldHistory from "./HopfieldHistory";
 import City from "./City";
@@ -151,9 +151,9 @@ export default class HopfieldUI extends React.Component<{}, IState> {
     return p;
   }
 
-  setDefaultCities(cities: ICity[]): void {
+  setDefaultCities(): void {
     this.setState({
-      cities: cities,
+      cities: DEFAULT_CITIES,
     });
   }
 
@@ -186,7 +186,10 @@ export default class HopfieldUI extends React.Component<{}, IState> {
       <Row>
         <Col md={4}>
           Settings
-          <HopfieldSettings setSettings={this.setSettings} findPaths={this.findPaths} setDefaultCities={this.setDefaultCities} reset={this.reset}/>
+          <HopfieldSettings setSettings={this.setSettings} settings={this.state.settings} /> <br />
+          <Button onClick={this.findPaths}>Find path</Button>
+          <Button onClick={this.setDefaultCities}>Set default cities</Button> <br />
+          <Button onClick={this.reset}>Reset</Button>
           <Button onClick={this.clearHistory}>Clear history</Button>
           <br />
           {this.state.totalDistance && (<span>Total distance: {this.state.totalDistance}</span>)}
