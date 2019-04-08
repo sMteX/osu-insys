@@ -25,7 +25,7 @@ export default class HopfieldHistory extends React.Component<IProps, {}> {
       <Input type="select" size={10} onChange={this.optionChanged}>
         {this.props.history.map(item => (
           <option value={item.index}>
-            Cities: {item.cities.length}, length: {item.distance.toFixed(3)}
+            Počet měst: {item.cities.length}, délka: {item.distance.toFixed(3)}
           </option>
         ))}
       </Input>

@@ -8,11 +8,10 @@ class App extends Component {
     return (
       <Container fluid>
         <Col md={{
-          size: 8,
+          size: 9,
           offset: 2
         }}>
-          Hello
-          <br />
+          <h1>Problém obchodního cestujícího</h1>
           {/*<HopfieldUI />*/}
           <HopfieldUI2 />
         </Col>

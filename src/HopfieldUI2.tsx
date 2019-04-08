@@ -1,7 +1,7 @@
 import React, {ReactNode} from 'react';
 import {Button, Col, Row} from "reactstrap";
 import HopfieldCanvas from "./HopfieldCanvas2";
-import HopfieldSettings, {DEFAULT_CITIES} from "./HopfieldSettings2";
+import HopfieldSettings from "./HopfieldSettings2";
 import HopfieldNet from "./HopfieldNet2";
 import HopfieldHistory from "./HopfieldHistory";
 import City from "./City";
@@ -37,10 +37,17 @@ export const DEFAULT_SETTINGS: ISettings = {
   B: 0.5,
   C: 0.2,
   D: 0.5,
-  maxIterations: 1000,
+  maxIterations: 2000,
   tau: 1.0,
-  advanced: false,
+  advanced: true,
 };
+
+export const DEFAULT_CITIES: ICity[] = [
+  { index: 0, x: 100, y: 300 },
+  { index: 1, x: 200, y: 150 },
+  { index: 2, x: 75, y: 200 },
+  { index: 3, x: 350, y: 50 },
+];
 
 interface IState {
   settings: ISettings;
@@ -183,20 +190,20 @@ export default class HopfieldUI extends React.Component<{}, IState> {
 
   render(): ReactNode {
     return (
-      <Row>
-        <Col md={4}>
-          Settings
-          <HopfieldSettings setSettings={this.setSettings} settings={this.state.settings} /> <br />
-          <Button onClick={this.findPaths}>Find path</Button>
-          <Button onClick={this.setDefaultCities}>Set default cities</Button> <br />
-          <Button onClick={this.reset}>Reset</Button>
-          <Button onClick={this.clearHistory}>Clear history</Button>
+      <Row style={{ marginTop: 20 }}>
+        <Col md={5}>
+          <h4>Nastavení parametrů</h4>
+          <HopfieldSettings setSettings={this.setSettings} settings={this.state.settings} />
+          <Button onClick={this.findPaths}>Najít cestu</Button>
+          {/*<Button onClick={this.setDefaultCities}>Set default cities</Button> <br />*/}
+          <Button onClick={this.reset} style={{ marginLeft: 15 }}>Reset</Button>
+          <Button onClick={this.clearHistory} style={{ marginLeft: 15 }}>Vyčistit historii</Button>
           <br />
-          {this.state.totalDistance && (<span>Total distance: {this.state.totalDistance}</span>)}
+          {this.state.totalDistance && (<span style={{ marginTop: 10 }}>Celková délka cesty: {this.state.totalDistance.toFixed(3)}</span>)}
+          <h4>Historie</h4>
           <HopfieldHistory overrideState={this.overrideState} history={this.state.history.sort((a, b) => b.index - a.index)} />
         </Col>
-        <Col md={8}>
-          Canvas
+        <Col md={7}>
           <HopfieldCanvas addCity={this.addCity} removeCity={this.removeCity} cities={this.state.cities} paths={this.state.paths} />
         </Col>
       </Row>
