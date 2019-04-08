@@ -1,7 +1,6 @@
 import React, {Component} from 'react';
 import {Container, Col} from 'reactstrap';
-import HopfieldUI from './HopfieldUI';
-import HopfieldUI2 from './HopfieldUI2';
+import HopfieldUI from './HopfieldUI2';
 
 class App extends Component {
   render() {
@@ -12,8 +11,7 @@ class App extends Component {
           offset: 2
         }}>
           <h1>Problém obchodního cestujícího</h1>
-          {/*<HopfieldUI />*/}
-          <HopfieldUI2 />
+          <HopfieldUI />
         </Col>
       </Container>
     );
