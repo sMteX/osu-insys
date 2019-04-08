@@ -36,8 +36,8 @@ export const DEFAULT_SETTINGS: ISettings = {
   A: 0.5,
   B: 0.5,
   C: 0.2,
-  D: 0.5,
-  maxIterations: 2000,
+  D: 1.25,
+  maxIterations: 1500,
   tau: 1.0,
   advanced: true,
 };
@@ -193,15 +193,18 @@ export default class HopfieldUI extends React.Component<{}, IState> {
       <Row style={{ marginTop: 20 }}>
         <Col md={5}>
           <h4>Nastavení parametrů</h4>
-          <HopfieldSettings setSettings={this.setSettings} settings={this.state.settings} />
+          <HopfieldSettings setSettings={this.setSettings} settings={this.state.settings} /> <br />
           <Button onClick={this.findPaths}>Najít cestu</Button>
           {/*<Button onClick={this.setDefaultCities}>Set default cities</Button> <br />*/}
           <Button onClick={this.reset} style={{ marginLeft: 15 }}>Reset</Button>
           <Button onClick={this.clearHistory} style={{ marginLeft: 15 }}>Vyčistit historii</Button>
           <br />
           {this.state.totalDistance && (<span style={{ marginTop: 10 }}>Celková délka cesty: {this.state.totalDistance.toFixed(3)}</span>)}
-          <h4>Historie</h4>
-          <HopfieldHistory overrideState={this.overrideState} history={this.state.history.sort((a, b) => b.index - a.index)} />
+          <br />
+          {this.state.history.length > 0 && (<>
+            <h4>Historie</h4>
+            <HopfieldHistory overrideState={this.overrideState} history={this.state.history.sort((a, b) => b.index - a.index)} />
+          </>)}
         </Col>
         <Col md={7}>
           <HopfieldCanvas addCity={this.addCity} removeCity={this.removeCity} cities={this.state.cities} paths={this.state.paths} />

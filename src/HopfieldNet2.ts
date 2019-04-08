@@ -129,13 +129,14 @@ export default class HopfieldNet2 {
       oldEnergy = newEnergy;
       i++;
     } while (i < this.maxIterations);
-    
+
     this.findTour();
   }
 
   public train2(): { paths: number[], distance: number, k: number } {
     let oldEnergy, newEnergy;
-    const THRESHOLD = 0.0000001;
+    const THRESHOLD = 0.000001;
+    const CONSECUTIVE_LOWS = 50;
 
     oldEnergy = this.energy;
 
@@ -143,16 +144,24 @@ export default class HopfieldNet2 {
     let minDist = Number.MAX_VALUE;
     let minPaths: number[] = [];
     let minK = 0;
+    let thresholdsHit = 0;
 
-    for (let k = 0; k < 1500; k++) {
+    for (let k = 0; k < 1000; k++) {
       i = 0;
       this.setupNeurons();
+      thresholdsHit = 0;
       do {
         this.calculateActivations();
         this.calculateOutputs();
         newEnergy = this.energy;
 
         if (oldEnergy - newEnergy < THRESHOLD) {
+          thresholdsHit++;
+        } else {
+          thresholdsHit = 0;
+        }
+
+        if (thresholdsHit === CONSECUTIVE_LOWS) {
           break;
         }
 
@@ -169,7 +178,7 @@ export default class HopfieldNet2 {
     }
     return { paths: minPaths, distance: minDist, k: minK };
   }
-  
+
   private findTour(): void {
     // tag is an array of "checked neurons"
     const tag = HopfieldNet2.initializeSquareMatrix(this.n);
