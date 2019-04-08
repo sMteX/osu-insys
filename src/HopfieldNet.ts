@@ -1,9 +1,9 @@
 import City from "./City";
-import {ISettings} from "./HopfieldUI2";
+import {ISettings} from "./HopfieldUI";
 
 const DIAG_DIST = Math.sqrt(2 * 500 * 500);
 
-export default class HopfieldNet2 {
+export default class HopfieldNet {
   private readonly n: number;
 
   private readonly weights: number[][];
@@ -43,17 +43,17 @@ export default class HopfieldNet2 {
     this.maxIterations = maxIterations;
     this.n = cities.length;
 
-    this.weights = HopfieldNet2.initializeSquareMatrix(this.n * this.n);
-    this.activations = HopfieldNet2.initializeSquareMatrix(this.n);
-    this.outputs = HopfieldNet2.initializeSquareMatrix(this.n);
-    this.cityOutputs = HopfieldNet2.initializeArray(this.n);
-    this.timeOutputs = HopfieldNet2.initializeArray(this.n);
+    this.weights = HopfieldNet.initializeSquareMatrix(this.n * this.n);
+    this.activations = HopfieldNet.initializeSquareMatrix(this.n);
+    this.outputs = HopfieldNet.initializeSquareMatrix(this.n);
+    this.cityOutputs = HopfieldNet.initializeArray(this.n);
+    this.timeOutputs = HopfieldNet.initializeArray(this.n);
     this.totalOutput = 0;
 
-    this.distances = HopfieldNet2.initializeSquareMatrix(this.n);
+    this.distances = HopfieldNet.initializeSquareMatrix(this.n);
 
-    this.tourByCity = HopfieldNet2.initializeArray(this.n);
-    this.tourByTime = HopfieldNet2.initializeArray(this.n);
+    this.tourByCity = HopfieldNet.initializeArray(this.n);
+    this.tourByTime = HopfieldNet.initializeArray(this.n);
 
     this.populateDistances(cities);
     this.setupNeurons();
@@ -181,7 +181,7 @@ export default class HopfieldNet2 {
 
   private findTour(): void {
     // tag is an array of "checked neurons"
-    const tag = HopfieldNet2.initializeSquareMatrix(this.n);
+    const tag = HopfieldNet.initializeSquareMatrix(this.n);
     const max = {
       value: <number> -10.0,
       x: <number | null> null,
@@ -262,10 +262,10 @@ export default class HopfieldNet2 {
             const jp = (j === this.n - 1) ? 0 : j + 1;
             const jm = (j === 0) ? this.n - 1: j - 1;
 
-            const Dxy = HopfieldNet2.kroneckerDelta(x, y);
-            const Dij = HopfieldNet2.kroneckerDelta(i, j);
-            const Dijp = HopfieldNet2.kroneckerDelta(i, jp);
-            const Dijm = HopfieldNet2.kroneckerDelta(i, jm);
+            const Dxy = HopfieldNet.kroneckerDelta(x, y);
+            const Dij = HopfieldNet.kroneckerDelta(i, j);
+            const Dijp = HopfieldNet.kroneckerDelta(i, jp);
+            const Dijm = HopfieldNet.kroneckerDelta(i, jm);
 
             // calculating weight between Uxi and Uyj
             this.weights[t1][t2] = -this.A * Dxy * (1 - Dij)
@@ -280,7 +280,7 @@ export default class HopfieldNet2 {
 
   private assignInputs(): void {
     // initialize a random NxN matrix of values (-1, 0) ?
-    const inputMatrix: number[][] = HopfieldNet2.initializeSquareMatrix(this.n);
+    const inputMatrix: number[][] = HopfieldNet.initializeSquareMatrix(this.n);
     for (let i = 0; i < this.n; i++) {
       inputMatrix[i] = [];
       for (let j = 0; j < this.n; j++) {
@@ -337,7 +337,7 @@ export default class HopfieldNet2 {
   private populateDistances(cities: City[]): void {
     for (let i = 0; i < this.n; i++) {
       for (let j = 0; j < this.n; j++) {
-        this.distances[i][j] = HopfieldNet2.calculateDistance(cities[i], cities[j]);
+        this.distances[i][j] = HopfieldNet.calculateDistance(cities[i], cities[j]);
       }
     }
   }
@@ -355,7 +355,7 @@ export default class HopfieldNet2 {
   }
 
   private static initializeSquareMatrix(n: number): number[][] {
-    return HopfieldNet2.initializeArray(n).map(_ => HopfieldNet2.initializeArray(n));
+    return HopfieldNet.initializeArray(n).map(_ => HopfieldNet.initializeArray(n));
   }
 
   private static stringifyNeurons(outputs: number[][]): string {

@@ -1,7 +1,7 @@
 import React from 'react';
 import {Circle, Layer, Line, Rect, Stage, Text} from "react-konva";
 import * as Konva from "konva";
-import {ICity, IPath} from "./HopfieldUI2";
+import {ICity, IPath} from "./HopfieldUI";
 
 const LEFT_BUTTON = 0;
 const RIGHT_BUTTON = 2;

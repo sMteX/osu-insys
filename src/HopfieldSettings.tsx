@@ -1,5 +1,5 @@
 import React from 'react';
-import {ISettings} from './HopfieldUI2';
+import {ISettings} from './HopfieldUI';
 import {Col, Row} from "reactstrap";
 
 interface IProps {

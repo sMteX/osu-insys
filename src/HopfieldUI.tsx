@@ -1,8 +1,8 @@
 import React, {ReactNode} from 'react';
 import {Button, Col, Row} from "reactstrap";
-import HopfieldCanvas from "./HopfieldCanvas2";
-import HopfieldSettings from "./HopfieldSettings2";
-import HopfieldNet from "./HopfieldNet2";
+import HopfieldCanvas from "./HopfieldCanvas";
+import HopfieldSettings from "./HopfieldSettings";
+import HopfieldNet from "./HopfieldNet";
 import HopfieldHistory from "./HopfieldHistory";
 import City from "./City";
 

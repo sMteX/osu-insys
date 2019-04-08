@@ -1,5 +1,5 @@
 import React, {ReactNode} from 'react';
-import { IHistoryItem } from './HopfieldUI2';
+import { IHistoryItem } from './HopfieldUI';
 import {Input} from "reactstrap";
 
 interface IProps {

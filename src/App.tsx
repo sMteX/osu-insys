@@ -1,6 +1,6 @@
 import React, {Component} from 'react';
 import {Container, Col} from 'reactstrap';
-import HopfieldUI from './HopfieldUI2';
+import HopfieldUI from './HopfieldUI';
 
 class App extends Component {
   render() {
